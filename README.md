@@ -1,27 +1,27 @@
 # releases.soneyko.ai
 
-Единый источник готовых релизов программного обеспечения Soneyko. Исходный код находится в репозитории соответствующего проекта; здесь описан обязательный контракт сборки, хранения, публикации и обновления.
+The central source of ready-to-install Soneyko software releases. Source code lives in each project's own repository; this document defines the mandatory contract for building, storing, publishing, and updating releases.
 
-Публичные файлы раздаются по HTTPS через `https://releases.soneyko.ai`. Хранилище артефактов — Cloudflare R2. S3 endpoint используется только для публикации и административной проверки, публичный custom domain — для скачивания. Контейнерные образы в этот контракт не входят.
+Public files are served over HTTPS at `https://releases.soneyko.ai`. Artifacts are stored in Cloudflare R2. The S3 endpoint is used only for publishing and administrative verification; clients download from the public custom domain. Container images are outside the scope of this contract.
 
-> Этот README — спецификация и пример настройки. Сам по себе он не создаёт bucket, DNS, secrets, GitHub Actions или готовые сборки. Скрипт сборки каждого приложения реализуется в его исходном репозитории.
+> This README is a specification and configuration example. It does not create a bucket, DNS records, secrets, GitHub Actions, or completed builds. Each application's build script must be implemented in its source repository.
 
-## 1. Обязательные правила релиза
+## 1. Mandatory release rules
 
-- Каждый проект имеет постоянный уникальный slug: например, `node-agent`. Разрешены строчные латинские буквы, цифры и одиночные дефисы; начало и конец — буква или цифра. Slug не меняется при переименовании GitHub-репозитория.
-- **Название GitHub Release строго `Build 1`, `Build 2`, `Build 3` и далее.** Тег: `build-1`, `build-2`, `build-3`. В пути хранилища используется тот же тег.
-- Нумерация отдельная для каждого проекта, не для всей организации. Дополнительную semver-версию можно указать в описании и manifest, но она не заменяет `Build N`.
-- Один постоянный workflow `release.yml` владеет нумерацией проекта. В приведённом примере `N = github.run_number`. Неудачная попытка расходует номер: пропуски допустимы, повторное использование номера запрещено.
-- Повторный запуск jobs (`Re-run`) не является новым Build. Для новой сборки запускается новый workflow run. Нельзя удалять/пересоздавать workflow или менять схему счётчика без сохранения монотонной нумерации.
-- Build привязан к точному полному Git commit SHA. Сборки разных исходных commits под одним номером недопустимы.
-- Релиз публикуется только после успешной сборки и проверки **всей обязательной матрицы**. Отсутствующая архитектура или версия ОС — ошибка релиза, а не молчаливый пропуск.
-- Все файлы в `builds/build-N/` неизменяемы. Нельзя перезаписывать старый архив, manifest или подпись. Исправление выпускается новым Build.
-- Канал `stable` обновляется только после загрузки, обратного чтения и проверки всех файлов и создания GitHub Release.
-- Секреты, `.env`, приватные ключи, конфиги машин и пользовательские данные не включаются в артефакты.
+- Every project has a permanent, unique slug, such as `node-agent`. Use lowercase ASCII letters, digits, and single hyphens; the first and last characters must be letters or digits. Renaming a GitHub repository does not change its project slug.
+- **GitHub Release titles must be exactly `Build 1`, `Build 2`, `Build 3`, and so on.** Tags must be `build-1`, `build-2`, `build-3`. Storage paths use the same tag.
+- Build numbers are allocated per project, not organization-wide. An additional semantic version may appear in the description and manifest, but it does not replace `Build N`.
+- One permanent `release.yml` workflow owns the project's numbering. In the example below, `N = github.run_number`. Failed runs consume a number: gaps are allowed, but reusing a number is prohibited.
+- Re-running jobs (`Re-run`) does not create a new Build. Start a new workflow run for a new build. Do not delete/recreate the workflow or change its counter scheme without preserving monotonically increasing numbering.
+- Each Build is bound to an exact, full Git commit SHA. Builds from different source commits must never share a number.
+- Publish a release only after **the entire required matrix** has been built and verified successfully. A missing architecture or OS version is a release failure, not a silently skipped target.
+- All files under `builds/build-N/` are immutable. Never overwrite an existing archive, manifest, or signature. Publish corrections as a new Build.
+- Update `stable` only after every file has been uploaded, read back, and verified, and the GitHub Release has been created.
+- Never include secrets, `.env` files, private keys, machine configurations, or user data in release artifacts.
 
-## 2. Обязательные дистрибутивы и архитектуры
+## 2. Required distributions and architectures
 
-Архитектуры перечислены **для каждой версии отдельно**. Нельзя строить декартово произведение всех версий и всех архитектур.
+Architectures are listed **separately for each version**. Do not generate a Cartesian product of every version and every architecture.
 
 - **AlmaLinux**
   - 10: `amd64`, `arm64`.
@@ -63,8 +63,8 @@
   - 8: `amd64`, `arm64`.
 - **SUSE Linux Enterprise Server**
   - 16: `amd64`, `arm64`.
-  - 15 SP4 и новее в ветке 15: `amd64`, `arm64`.
-  - 12 SP4 и новее в ветке 12: `amd64`.
+  - 15 SP4 and later service packs in the 15 series: `amd64`, `arm64`.
+  - 12 SP4 and later service packs in the 12 series: `amd64`.
 - **Ubuntu**
   - 26.04 Resolute: `amd64`, `arm64`.
   - 24.04 Noble: `amd64`, `arm64`.
@@ -73,17 +73,18 @@
   - 18.04 Bionic: `amd64`, `i386`.
   - 16.04 Xenial: `amd64`, `i386`.
 
-Идентификаторы дистрибутивов: `almalinux`, `amazonlinux`, `centos`, `debian`, `opensuse-leap`, `oraclelinux`, `raspios`, `rhel`, `rocky`, `sles`, `ubuntu`. Для SLES пути `15-sp4` и `12-sp4` обозначают минимальный поддерживаемый service pack; совместимость с последующими SP проверяется отдельно.
 
-Канонические имена архитектур: `amd64` = x86-64, `arm64` = AArch64, `i386` = 32-bit x86, `armhf` = 32-bit ARM hard-float. Минимальные CPU/ISA и ABI фиксируются в документации приложения и проверяются на целевых системах. `armhf` не означает автоматическую совместимость со всеми поколениями ARM; `amd64` не означает, что бинарник можно собирать с `-march=native`.
+Distribution identifiers: `almalinux`, `amazonlinux`, `centos`, `debian`, `opensuse-leap`, `oraclelinux`, `raspios`, `rhel`, `rocky`, `sles`, `ubuntu`. For SLES, the `15-sp4` and `12-sp4` paths identify the minimum supported service pack; compatibility with later service packs must be tested separately.
 
-Наличие старой ОС в матрице означает требование совместимости приложения, а не обещание обновлений безопасности самой ОС. Для EOL-систем нужны зафиксированные архивные build-окружения. Нельзя незаметно заменить старую ОС новой или понизить требования проверки.
+Canonical architecture names: `amd64` = x86-64, `arm64` = AArch64, `i386` = 32-bit x86, and `armhf` = 32-bit ARM hard-float. Document minimum CPU/ISA and ABI requirements for each application and verify them on the target systems. `armhf` does not automatically mean compatibility with every ARM generation; `amd64` does not permit building with `-march=native`.
 
-Windows, macOS, Alpine/musl и другие цели можно добавлять отдельным расширением контракта; они не подменяют перечисленную обязательную Linux-матрицу.
+Including an old OS in the matrix is an application compatibility requirement, not a promise of security updates for that OS. EOL systems require pinned, archived build environments. Do not silently replace an old OS with a newer one or weaken verification requirements.
 
-## 3. Формат и расположение файлов
+Windows, macOS, Alpine/musl, and other targets may be added through a separate extension of this contract; they do not replace the required Linux matrix above.
 
-Для каждой комбинации ОС/версии/архитектуры обязателен `.tar.gz` с готовым исполняемым файлом. Архив не должен требовать компиляции на машине получателя. `.deb` и `.rpm` допускаются дополнительно; наличие пакетов ещё не делает bucket полноценным APT/YUM-репозиторием — для этого нужны отдельные подписанные метаданные репозитория.
+## 3. Artifact formats and storage layout
+
+Every OS/version/architecture combination must have a `.tar.gz` archive containing a ready-to-run executable. Users must not need to compile anything on the destination machine. Additional `.deb` and `.rpm` packages are allowed. Merely storing packages in a bucket does not make it a complete APT/YUM repository: that requires separate, signed repository metadata.
 
 ```text
 <project>/
@@ -96,49 +97,49 @@ Windows, macOS, Alpine/musl и другие цели можно добавлят
         debian/12/amd64/node-agent-build-1-linux-debian-12-amd64.tar.gz
         debian/12/arm64/node-agent-build-1-linux-debian-12-arm64.tar.gz
         ubuntu/24.04/amd64/node-agent-build-1-linux-ubuntu-24.04-amd64.tar.gz
-        ...остальные обязательные цели...
+        ...remaining required targets...
     build-2/
       ...
   channels/
     stable.json
 ```
 
-Полный URL примера:
+Example full URL:
 
 ```text
 https://releases.soneyko.ai/node-agent/builds/build-1/linux/debian/12/amd64/node-agent-build-1-linux-debian-12-amd64.tar.gz
 ```
 
-Внутри архива:
+Archive contents:
 
 ```text
 bin/node-agent
 README.md
 LICENSE
-licenses/                  # лицензии встроенных сторонних компонентов
-systemd/node-agent.service # если приложение является systemd-сервисом
+licenses/                  # licenses for bundled third-party components
+systemd/node-agent.service # if the application is a systemd service
 config/node-agent.example.yaml
 ```
 
-Обязательны `bin/<project>` и лицензия приложения. Остальные элементы добавляются по необходимости. Исполняемые файлы сохраняют executable bit. Архив не содержит абсолютных путей, `..`, device nodes, setuid/setgid-файлов или ссылок, выходящих за каталог распаковки. Распаковка не должна менять владельца на root по данным архива.
+`bin/<project>` and the application's license are required. Include other files as needed. Executables retain their executable bit. Archives must not contain absolute paths, `..` components, device nodes, setuid/setgid files, or links escaping the extraction directory. Extraction must not adopt root ownership from archive metadata.
 
-Релизы хранятся до явного вывода из эксплуатации; предыдущая рабочая версия не удаляется автоматической очисткой. Неиспользуемые незавершённые Build можно чистить отдельной проверяемой процедурой, но не `sync --delete` из release workflow.
+Keep releases until they are explicitly retired; automated cleanup must not remove the previous working version. Unused, incomplete Builds may be removed through a separate, verified cleanup procedure, never through `sync --delete` in the release workflow.
 
-## 4. Сборка и проверка совместимости
+## 4. Building and verifying compatibility
 
-- Сборка выполняется в изолированном окружении целевого дистрибутива или с корректным закреплённым sysroot/toolchain. Нельзя считать бинарник, собранный на свежем Ubuntu, совместимым с CentOS 7 или Ubuntu 16.04.
-- Для glibc проверяются минимальная версия, dynamic loader и внешние библиотеки. Статический бинарник допустим, если приложение и его лицензии это позволяют.
-- Можно переиспользовать идентичные байты для нескольких целей только после реальной проверки совместимости каждой цели; каждый target всё равно присутствует в manifest и имеет свой путь.
-- Для каждой цели обязательны проверка формата/архитектуры ELF, запуск `--version` или аналогичного self-test и функциональный smoke test. Cross-compilation без запуска не равна проверенной поддержке.
-- Чужие архитектуры проверяются на native runners или корректном QEMU-окружении. Установка QEMU и target-окружений входит в build-скрипт/инфраструктуру проекта.
-- Точные версии compiler/toolchain, sysroot и container digest фиксируются в проекте. Системы с коммерческими образами/репозиториями требуют законного доступа, а не подмены совместимым дистрибутивом без проверки.
-- Node-based Actions выполняются на современном runner; старое target-окружение запускается внутри build-инструмента, а не как job container, неспособный запустить сам Action.
+- Build in an isolated environment for the target distribution, or use a correctly pinned sysroot/toolchain. A binary built on a recent Ubuntu release must not be assumed compatible with CentOS 7 or Ubuntu 16.04.
+- For glibc builds, check the minimum version, dynamic loader, and external libraries. Static binaries are acceptable if the application and its licenses permit them.
+- Identical bytes may be reused across targets only after compatibility has actually been verified for each target. Every target still needs its own manifest entry and storage path.
+- Each target requires an ELF format/architecture check, a `--version` invocation or equivalent self-test, and a functional smoke test. Cross-compiling without execution does not establish verified support.
+- Test foreign architectures on native runners or in a correctly configured QEMU environment. Installing QEMU and provisioning target environments are responsibilities of the project's build script/infrastructure.
+- Pin compiler/toolchain versions, sysroots, and container digests in the project. Commercial images/repositories require legitimate access; substituting a compatible distribution without verification is not acceptable.
+- Run Node-based Actions on a modern runner. Launch the old target environment inside the build tool, not as a job container that cannot execute the Action itself.
 
-## 5. Manifest, подпись и каналы
+## 5. Manifests, signatures, and channels
 
-`manifest.json` содержит полный список целей, номер Build, project slug, commit SHA, дату UTC, размер и SHA-256 каждого архива. Подписываются **точные байты** manifest, а не JSON после повторной сериализации. Отдельный `SHA256SUMS` — удобство для ручной проверки; авторитетные хеши находятся в подписанном manifest.
+`manifest.json` contains the complete target list, Build number, project slug, commit SHA, UTC publication timestamp, archive sizes, and SHA-256 hashes. Sign **the exact manifest bytes**, not JSON reconstructed through serialization. A separate `SHA256SUMS` file is a convenience for manual checks; authoritative hashes are contained in the signed manifest.
 
-Сокращённый пример структуры (реальный manifest содержит всю матрицу):
+Abbreviated structure example; the actual manifest must contain the entire matrix:
 
 ```json
 {
@@ -163,9 +164,9 @@ config/node-agent.example.yaml
 }
 ```
 
-Значения примера иллюстративные, не данные существующего релиза.
+These values are illustrative, not metadata for an existing release.
 
-`channels/stable.json` — небольшой атомарно заменяемый указатель:
+`channels/stable.json` is a small, atomically replaced pointer:
 
 ```json
 {
@@ -176,63 +177,63 @@ config/node-agent.example.yaml
 }
 ```
 
-Указатель — только механизм обнаружения, **не доверенный источник кода**. Клиент обязательно проверяет подпись manifest, project, Build и выбранную цель. Публичный ключ доставляется заранее доверенным способом, не скачивается вместе с бинарником с того же зеркала. Подмена указателя не должна позволять установить другой проект или откатить уже известный номер Build.
+The pointer is a discovery mechanism, **not a trusted source of code**. Clients must verify the manifest signature, project, Build, and selected target. Provision the public key in advance through a trusted channel; do not download it alongside the binary from the same mirror. Replacing the pointer must not allow installation of another project or rollback below a previously trusted Build number.
 
-Для защиты новых установок от длительной выдачи старых, но корректно подписанных релизов нужны bootstrap minimum Build и/или протокол со сроками действия подписанных метаданных, например TUF. Один возрастающий локальный счётчик не решает freeze-attack для новой машины.
+Protecting new installations against prolonged delivery of old but validly signed releases requires a bootstrap minimum Build and/or a protocol with expiring signed metadata, such as TUF. A monotonically increasing local counter alone does not protect a new machine against freeze attacks.
 
-## 6. Cloudflare R2 и кеширование
+## 6. Cloudflare R2 and caching
 
-1. Создать bucket для релизов и подключить к нему custom domain `releases.soneyko.ai`. DNS-запись сама по себе не подключает bucket; домен добавляется в настройках R2.
-2. Выбрать публичное чтение через custom domain либо отдельный механизм авторизации клиентов. Пример ниже предполагает публичные артефакты, не приватное распространение.
-3. Публиковать через `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`, region `auto`. В ключе объекта нет начального `/` и имени bucket.
-4. Для `*/builds/*`: `Cache-Control: public, max-age=31536000, immutable`.
-5. Для `*/channels/*`: `Cache-Control: no-store`, плюс Cache Rule **Bypass cache**. Это правило должно иметь приоритет над общим Cache Everything.
-6. Не кешировать ошибки/404 публикации надолго. Если до публикации URL проверялся через CDN, инвалидировать отрицательный кеш или дождаться его истечения.
-7. Публичный домен должен отдавать бинарники без HTML challenge, интерактивной авторизации и преобразования содержимого. Проверять Content-Type, длину и SHA-256 реальным скачиванием с домена.
-8. Не использовать `r2.dev` как production URL. Ограничить токен конкретным bucket, не выдавать account-wide административные права.
+1. Create a release bucket and connect the custom domain `releases.soneyko.ai`. A DNS record alone does not connect the bucket; add the domain in the R2 settings.
+2. Choose public reads through the custom domain or a separate client authorization mechanism. The example below assumes public artifacts, not private distribution.
+3. Publish through `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`, using region `auto`. Object keys have no leading `/` and do not include the bucket name.
+4. For `*/builds/*`, use `Cache-Control: public, max-age=31536000, immutable`.
+5. For `*/channels/*`, use `Cache-Control: no-store` and a **Bypass cache** Cache Rule. This rule must take precedence over a general Cache Everything rule.
+6. Do not cache publication errors/404s for long periods. If a URL was requested through the CDN before publication, invalidate the negative cache or wait for it to expire.
+7. The public domain must serve binaries without HTML challenges, interactive authentication, or content transformations. Verify Content-Type, length, and SHA-256 by downloading from the actual domain.
+8. Do not use `r2.dev` as the production URL. Scope the token to the relevant bucket; do not grant account-wide administrative privileges.
 
-Один общий write-key bucket, выданный нескольким репозиториям, **не изолирует их по project prefix**: скомпрометированный workflow может изменить чужие объекты. Для независимых границ доверия использовать отдельные buckets/учётные данные или центральный publisher, который проверяет проект и разрешённый prefix. Пример ниже предназначен только для доверенных репозиториев-публикаторов.
+Sharing one bucket write key across repositories **does not isolate them by project prefix**: a compromised workflow can modify another project's objects. For independent trust boundaries, use separate buckets/credentials or a central publisher that validates the project and allowed prefix. The example below is intended only for trusted publishing repositories.
 
-## 7. Переменные и секреты GitHub Organization
+## 7. GitHub Organization variables and secrets
 
-**Да, настройки организации доступны workflows разрешённых репозиториев.** Их не требуется копировать в каждый репозиторий. Это не переменные ОС: в Actions они читаются через `vars.NAME` и `secrets.NAME`.
+**Yes: organization settings are available to workflows in authorized repositories.** They do not need to be copied into every repository. They are not OS environment variables: Actions accesses them through `vars.NAME` and `secrets.NAME`.
 
-В организации: **Settings → Secrets and variables → Actions → Variables / Secrets**. В Repository access выбрать `Selected repositories` и явно перечислить доверенные репозитории. `All repositories` допустимо для несекретных общих настроек; не выдавать write/signing secrets всем репозиториям без проверки их границы доверия.
+In the organization, open **Settings → Secrets and variables → Actions → Variables / Secrets**. Under Repository access, choose `Selected repositories` and explicitly list trusted repositories. `All repositories` is acceptable for common, non-secret settings; do not grant write/signing secrets to every repository without reviewing its trust boundary.
 
-### Organization Variables: несекретные настройки
+### Organization Variables: non-secret settings
 
-- `R2_ACCOUNT_ID` — Cloudflare account ID.
-- `R2_BUCKET` — bucket релизов.
-- `RELEASES_BASE_URL` — `https://releases.soneyko.ai`.
-- `RELEASE_SIGNING_PUBLIC_KEY` — публичный ключ minisign; пригоден для проверки CI и документирования bootstrap, но клиенты должны получить доверенную копию независимо.
+- `R2_ACCOUNT_ID`: Cloudflare account ID.
+- `R2_BUCKET`: release bucket.
+- `RELEASES_BASE_URL`: `https://releases.soneyko.ai`.
+- `RELEASE_SIGNING_PUBLIC_KEY`: minisign public key, used for CI verification and documenting bootstrap configuration. Clients must obtain an independently trusted copy.
 
-### Organization Secrets: только доверенным publishers
+### Organization Secrets: trusted publishers only
 
-- `R2_ACCESS_KEY_ID` — S3 access key с правами работы с нужным bucket.
-- `R2_SECRET_ACCESS_KEY` — секретная часть S3 key.
-- `RELEASE_SIGNING_KEY_B64` — base64 приватного **незашифрованного** ключа minisign. Base64 — кодирование, не шифрование; защита обеспечивается GitHub Secrets и ограничением доступа к jobs.
+- `R2_ACCESS_KEY_ID`: S3 access key authorized for the relevant bucket.
+- `R2_SECRET_ACCESS_KEY`: secret portion of the S3 key.
+- `RELEASE_SIGNING_KEY_B64`: base64-encoded, **unencrypted** minisign private key. Base64 is encoding, not encryption; protection comes from GitHub Secrets and restricted job access.
 
-Ключ подписи генерируется вне CI: `minisign -G -W`. Приватный ключ не коммитится и не загружается в R2. Для разных границ доверия лучше разные ключи проекта, а не один общий ключ на всю организацию. При этом одноимённый repository/environment secret может перекрыть organization secret.
+Generate the signing key outside CI using `minisign -G -W`. Never commit the private key or upload it to R2. Separate project keys are preferable to one organization-wide key when trust boundaries differ. A repository/environment secret with the same name can override the organization secret.
 
 ### Repository Variable
 
-- `RELEASE_PROJECT` — постоянный slug конкретной программы, например `node-agent`. Не задавать один общий slug для всей организации.
+- `RELEASE_PROJECT`: the application's permanent slug, such as `node-agent`. Do not set one shared slug for the entire organization.
 
-### Важные особенности доступа
+### Important access rules
 
-- Organization-level variables и secrets имеют политику доступа по репозиториям. Для private repositories на GitHub Free organization-level secrets/variables недоступны; нужен подходящий план либо repository-level настройки.
-- Для одноимённых настроек более узкий уровень обычно имеет приоритет: environment → repository → organization. Environment values доступны только job с соответствующим environment; не рассчитывать на них при планировании матрицы до запуска job.
-- Fork pull requests не должны получать release secrets. Не использовать `pull_request_target` для исполнения чужого build-скрипта с ключами публикации.
-- В reusable workflow secrets передаются явно либо через `secrets: inherit` в разрешённом контексте. Сам факт наличия org secret не означает его автоматическое наследование вызываемым workflow.
-- `GITHUB_TOKEN` создаётся GitHub для текущего репозитория. Для создания Release достаточно `contents: write` в publish job; PAT всей организации не нужен. Этот token не даёт произвольного доступа к другим private repositories.
-- Ключи публикации не передаются build jobs. Publish job исполняется только из защищённой default branch. Защитить `.github/workflows/` и `ci/` через branch protection/CODEOWNERS; любой, кто может изменить trusted publisher, потенциально может использовать его secrets.
-- Для повышения защиты назначить publish job GitHub Environment с required reviewers. Если нужен полностью автоматический выпуск, отсутствие ручного approval — осознанное решение, а не обход проверки.
+- Organization-level variables and secrets have repository access policies. Private repositories on GitHub Free cannot access organization-level secrets/variables; use a suitable plan or repository-level settings.
+- For identically named settings, the narrower scope generally takes precedence: environment → repository → organization. Environment values are available only to jobs using that environment; do not rely on them while planning the matrix before a job starts.
+- Fork pull requests must not receive release secrets. Do not use `pull_request_target` to execute an untrusted build script with publishing credentials.
+- Reusable workflows receive secrets explicitly or through `secrets: inherit` where permitted. An organization secret's existence does not imply automatic inheritance by a called workflow.
+- GitHub creates `GITHUB_TOKEN` for the current repository. Creating a Release requires `contents: write` in the publish job; an organization-wide PAT is unnecessary. This token does not grant arbitrary access to other private repositories.
+- Do not pass publishing keys to build jobs. Run the publish job only from the protected default branch. Protect `.github/workflows/` and `ci/` with branch protection/CODEOWNERS: anyone able to modify the trusted publisher may potentially use its secrets.
+- For stronger protection, assign the publish job a GitHub Environment with required reviewers. Fully automated release without manual approval must be an explicit decision, not a bypass of review.
 
-## 8. Пример GitHub Actions
+## 8. GitHub Actions example
 
-Ниже файлы, которые нужно разместить **в исходном репозитории приложения**. В этом репозитории они приведены как документация, не как включённый workflow.
+Place the following files **in the application's source repository**. They are included here as documentation, not as an enabled workflow in this repository.
 
-### `ci/targets.py`: единая машиночитаемая матрица
+### `ci/targets.py`: a single machine-readable target matrix
 
 ```python
 import json
@@ -260,28 +261,28 @@ if __name__ == "__main__":
     ]}, separators=(",", ":")))
 ```
 
-### Контракт `ci/build-target.sh`
+### `ci/build-target.sh` contract
 
-Этот **проектный** скрипт нужно написать и проверить для своего языка и зависимостей. Универсальной команды сборки всех программ нет.
+Implement and test this **project-specific** script for the application's language and dependencies. There is no universal command that builds every program.
 
 ```text
 bash ci/build-target.sh <distro> <version> <arch> <build-number> <project-slug>
 ```
 
-Скрипт обязан собрать программу из текущего checkout, проверить её в целевой среде и создать ровно один архив:
+The script must build the program from the current checkout, test it in the target environment, and produce exactly one archive:
 
 ```text
 out/<distro>/<version>/<arch>/<project>-build-<N>-linux-<distro>-<version>-<arch>.tar.gz
 ```
 
-Например:
+For example:
 
 ```bash
 bash ci/build-target.sh debian 12 amd64 1 node-agent
 # out/debian/12/amd64/node-agent-build-1-linux-debian-12-amd64.tar.gz
 ```
 
-Exit 0 разрешён только после успешных tests и smoke. Внутреннюю архитектуру toolchain нужно сопоставлять явно: например, Go использует `386`, а путь релиза — `i386`. Для cgo/C/C++/Rust недостаточно просто поменять переменную архитектуры: нужны sysroot, loader и библиотеки целевой ОС.
+Exit 0 is allowed only after tests and smoke checks succeed. Map toolchain architecture names explicitly: for example, Go uses `386`, while the release path uses `i386`. For cgo/C/C++/Rust, changing an architecture variable is not enough: the target OS's sysroot, loader, and libraries are required.
 
 ### `.github/workflows/release.yml`
 
@@ -382,11 +383,11 @@ jobs:
           "$RUNNER_TEMP/publisher/bin/python" ci/publish.py
 ```
 
-Закреплённые SHA Actions нужно обновлять проверяемыми PR. Для production CI также зафиксировать версии и хеши publishing dependencies в lock-файле проекта; установка `boto3` выше показывает минимальную настройку, а не воспроизводимый dependency lock. GitHub-hosted runner должен иметь `gh`; для другого runner установить его отдельно.
+Update pinned Action SHAs through reviewed pull requests. For production CI, also pin publishing dependency versions and hashes in the project's lock file. The `boto3` installation above demonstrates minimal setup, not a reproducible dependency lock. GitHub-hosted runners must provide `gh`; install it separately on other runners.
 
-### `ci/publish.py`: подпись, загрузка, readback, GitHub Release, stable
+### `ci/publish.py`: signing, uploading, readback, GitHub Release, stable
 
-Пример использует обычный `PutObject` и ограничивает каждый файл 128 MiB. Для больших артефактов нужен отдельный multipart uploader с условием create-only на **CompleteMultipartUpload**, а не только на начале загрузки.
+This example uses regular `PutObject` and limits each file to 128 MiB. Larger artifacts require a separate multipart uploader with the create-only condition on **CompleteMultipartUpload**, not just at upload initiation.
 
 ```python
 import datetime
@@ -427,7 +428,7 @@ prefix = f"{project}/builds/{tag}"
 channel_key = f"{project}/channels/stable.json"
 s3 = boto3.client("s3", endpoint_url=f"https://{account}.r2.cloudflarestorage.com", region_name="auto")
 
-# Проверка текущего stable и ETag для compare-and-swap, не слепая перезапись.
+# Read the current stable pointer and ETag for compare-and-swap, not a blind overwrite.
 try:
     old = s3.get_object(Bucket=bucket, Key=channel_key)
 except ClientError as exc:
@@ -477,7 +478,7 @@ for local, content_type in [(manifest_file, "application/json"),
                             (signature_file, "text/plain"), (checksums, "text/plain")]:
     uploads.append((local, f"{prefix}/{local.name}", local.read_bytes(), content_type))
 
-# Create-only на самом write. Существующие объекты не перезаписываются даже при гонке.
+# Enforce create-only on the write itself, including concurrent writes.
 for local, key, body, content_type in uploads:
     s3.put_object(Bucket=bucket, Key=key, Body=body, ContentType=content_type,
                   CacheControl="public, max-age=31536000, immutable", IfNoneMatch="*")
@@ -486,7 +487,7 @@ for local, key, body, content_type in uploads:
     with urllib.request.urlopen(f"{base}/{key}", timeout=120) as response:
         assert digest(response.read()) == digest(body), f"Public readback mismatch: {key}"
 
-# GitHub Release получает архивы и подписанные метаданные; tag указывает на исходный commit.
+# Attach archives and signed metadata to GitHub Release; tag the source commit.
 subprocess.run(["gh", "release", "create", tag, "--target", os.environ["GITHUB_SHA"],
                 "--title", f"Build {build}", "--notes", f"Source: {os.environ['GITHUB_SHA']}\nManifest: {base}/{prefix}/manifest.json",
                 *[str(local) for local, *_ in uploads]], check=True)
@@ -505,33 +506,33 @@ with urllib.request.urlopen(f"{base}/{channel_key}", timeout=30) as response:
 print(f"Published Build {build}: {len(artifacts)} targets")
 ```
 
-Если upload, readback или GitHub Release завершился ошибкой, workflow завершается ошибкой и не должен продвигать `stable`. При неоднозначном сетевом исходе записи channel нужно прочитать его фактическое значение: timeout не доказывает, что write не состоялся. Ошибка CDN-проверки после записи тоже не означает автоматический rollback. Не удалять объекты в попытке повторно использовать тот же Build; запускать новый run с новым номером.
+If upload, readback, or GitHub Release creation fails, the workflow fails and must not promote `stable`. If a channel write has an ambiguous network outcome, read its actual value: a timeout does not prove the write did not commit. A failed CDN check after the write does not imply automatic rollback either. Do not delete objects to reuse the same Build; start a new run with a new number.
 
-Все архивы должны иметь уникальные имена, иначе GitHub Release assets будут конфликтовать. Пример проверяет доступность публичных файлов и состав Release; для более строгой приёмки дополнительно скачивать GitHub assets и сверять их хеши.
+Every archive must have a unique filename to avoid GitHub Release asset conflicts. The example verifies public file availability and the Release asset inventory. For stricter acceptance, also download GitHub assets and compare their hashes.
 
-## 9. Установка и обновление на машинах
+## 9. Installation and updates on machines
 
-- Доверенный bootstrap устанавливает public key, ожидаемый project slug, target и начальный minimum Build. Не выполнять скачанный `curl | bash` без проверки подписи.
-- Конфиги: `/etc/<project>/`; данные: `/var/lib/<project>/`; версии: `/opt/<project>/releases/build-N/`; активная версия: `/opt/<project>/current`.
-- `systemd timer` или другой updater читает `stable.json`, скачивает manifest и подпись, проверяет подпись minisign и ожидаемые project/Build/target, затем размер и SHA-256 архива.
-- Обновления сериализуются локальным lock. Архив распаковывается в новый временный каталог с проверкой путей и типов файлов, не поверх работающей версии.
-- После проверки выполняется атомарное переключение `current`, controlled restart и health check. При неуспехе возвращается сохранённая рабочая версия и сервис запускается снова.
-- Последний доверенный номер Build хранится отдельно от активной версии: локальный rollback не разрешает зеркалу снова предлагать старые Build как новые. Обновление на тот же номер не выполняется.
-- Конфиги и данные не перезаписываются. Откат бинарника не откатывает БД; несовместимые миграции требуют отдельного плана и backup.
-- Сначала canary-группа, затем остальные машины. Центральный bucket не должен означать одновременный рестарт всего парка.
+- A trusted bootstrap provisions the public key, expected project slug, target, and initial minimum Build. Never execute downloaded `curl | bash` content without signature verification.
+- Configuration: `/etc/<project>/`; data: `/var/lib/<project>/`; versions: `/opt/<project>/releases/build-N/`; active version: `/opt/<project>/current`.
+- A `systemd timer` or another updater reads `stable.json`, downloads the manifest and signature, verifies the minisign signature and expected project/Build/target, then checks the archive's size and SHA-256.
+- Serialize updates with a local lock. Extract into a new temporary directory with path and file-type checks, not over the running version.
+- After verification, atomically switch `current`, perform a controlled restart, and run a health check. On failure, restore the saved working version and restart the service.
+- Store the highest trusted Build number separately from the active version: a local rollback must not let the mirror offer older Builds as new updates. Do not update to the same number.
+- Never overwrite configuration or data. Rolling back a binary does not roll back a database; incompatible migrations require a separate plan and backup.
+- Roll out to a canary group first, then the remaining machines. A central bucket must not mean restarting the entire fleet at once.
 
-## 10. Приёмка нового проекта
+## 10. New project acceptance checklist
 
-- [ ] Закреплены slug, source repository, владелец workflow и правило `Build N` / `build-N`.
-- [ ] Все обязательные distro/version/architecture targets присутствуют в `ci/targets.py`.
-- [ ] `ci/build-target.sh` реально собирает и проверяет каждую цель, а не только переименовывает один бинарник.
-- [ ] Проверены лицензии, CPU/ABI/glibc и отсутствие секретов в артефактах.
-- [ ] Настроены R2 custom domain, TLS, read policy, Cache Rules и права bucket.
-- [ ] Organization variables/secrets видны только нужным publishers; отдельный project slug задан в repository variable.
-- [ ] Actions/toolchains/dependencies закреплены, default branch и CI-файлы защищены.
-- [ ] Полная матрица зелёная; GitHub Release имеет точное имя `Build N` и правильный commit.
-- [ ] Архивы, manifest, подпись и checksums доступны по ожидаемым URL; readback совпадает.
-- [ ] `stable` обновлён последним и не отдаётся из устаревшего кеша.
-- [ ] Проверены установка, canary upgrade, неуспешный health check, rollback и сохранность конфигов/данных.
+- [ ] Project slug, source repository, workflow owner, and `Build N` / `build-N` naming are fixed.
+- [ ] All required distro/version/architecture targets are present in `ci/targets.py`.
+- [ ] `ci/build-target.sh` actually builds and tests every target rather than renaming one binary.
+- [ ] Licenses, CPU/ABI/glibc compatibility, and the absence of secrets in artifacts are verified.
+- [ ] R2 custom domain, TLS, read policy, Cache Rules, and bucket permissions are configured.
+- [ ] Organization variables/secrets are available only to the intended publishers; the project slug is configured as a repository variable.
+- [ ] Actions/toolchains/dependencies are pinned; the default branch and CI files are protected.
+- [ ] The full matrix passes; the GitHub Release has the exact title `Build N` and points to the correct commit.
+- [ ] Archives, manifest, signature, and checksums are available at the expected URLs; readback matches.
+- [ ] `stable` is promoted last and is not served from a stale cache.
+- [ ] Installation, canary upgrade, a failed health check, rollback, and configuration/data preservation are tested.
 
-Изменение этой спецификации не означает, что перечисленные CI, R2 или updater уже настроены. Их включение и фактическая поддержка целей подтверждаются отдельными результатами сборки и испытаний.
+Changing this specification does not mean that CI, R2, or an updater is already configured. Enabling them and establishing actual target support require separate build and test results.
